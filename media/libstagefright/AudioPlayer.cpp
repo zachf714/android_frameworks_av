@@ -288,7 +288,7 @@ void AudioPlayer::pause(bool playPendingSamples) {
 
         mPinnedTimeUs = ALooper::GetNowUs();
     }
-
+    mSourcePaused = true;
     mPlaying = false;
     CHECK(mSource != NULL);
     if (mPauseRequired) {
@@ -306,6 +306,7 @@ status_t AudioPlayer::resume() {
         mSource->start();
     }
     status_t err;
+    mSourcePaused = false;
 
     if (mAudioSink.get() != NULL) {
         err = mAudioSink->start();
@@ -366,6 +367,7 @@ void AudioPlayer::reset() {
         mInputBuffer->release();
         mInputBuffer = NULL;
     }
+
     mSourcePaused = false;
     mSource->stop();
 
@@ -564,10 +566,32 @@ size_t AudioPlayer::fillBuffer(void *data, size_t size) {
 
                 mIsFirstBuffer = false;
             } else {
+<<<<<<< HEAD
                 err = mSource->read(&mInputBuffer, &options);
                 if (err == OK && mInputBuffer == NULL && mSourcePaused) {
                     ALOGV("mSourcePaused, return 0 from fillBuffer");
                     return 0;
+=======
+#ifdef QCOM_HARDWARE
+                if(!mSourcePaused) {
+#endif
+                    err = mSource->read(&mInputBuffer, &options);
+#ifdef QCOM_HARDWARE
+                    if (err == OK && mInputBuffer == NULL && mSourcePaused) {
+                        ALOGV("mSourcePaused, return 0 from fillBuffer");
+                        return 0;
+                    }
+                } else {
+                    break;
+                }
+            }
+
+            if(err == -EAGAIN) {
+                if(mSourcePaused){
+                    break;
+                } else {
+                    continue;
+>>>>>>> 2a7ee7d... libstagefright: Fix ANR issue in HTTP Streaming
                 }
             }
 

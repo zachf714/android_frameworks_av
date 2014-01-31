@@ -389,6 +389,9 @@ private:
 
                 int             getAudioSessionId() { return mAudioSessionId; }
 
+        virtual status_t        suspend();
+        virtual status_t        resume();
+
     private:
         friend class MediaPlayerService;
                                 Client( const sp<MediaPlayerService>& service,

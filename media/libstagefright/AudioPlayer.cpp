@@ -65,10 +65,8 @@ AudioPlayer::AudioPlayer(
       mPinnedTimeUs(-1ll),
       mPlaying(false),
       mStartPosUs(0),
-      mCreateFlags(flags)
-#ifdef QCOM_HARDWARE
-      ,mPauseRequired(false)
-#endif
+      mCreateFlags(flags),
+      mPauseRequired(false)
       {
 }
 
@@ -258,13 +256,16 @@ status_t AudioPlayer::start(bool sourceAlreadyStarted) {
     mStarted = true;
     mPlaying = true;
     mPinnedTimeUs = -1ll;
-#ifdef QCOM_HARDWARE
     const char *componentName;
     if (!(format->findCString(kKeyDecoderComponent, &componentName))) {
           componentName = "none";
     }
-    mPauseRequired = ExtendedCodec::isSourcePauseRequired(componentName);
-#endif
+    if (!strncmp(componentName, "OMX.qcom.", 9)) {
+        mPauseRequired = true;
+    } else {
+        mPauseRequired = false;
+    }
+
     return OK;
 }
 
@@ -398,9 +399,7 @@ void AudioPlayer::reset() {
     mStarted = false;
     mPlaying = false;
     mStartPosUs = 0;
-#ifdef QCOM_HARDWARE
     mPauseRequired = false;
-#endif
 }
 
 // static
@@ -566,17 +565,8 @@ size_t AudioPlayer::fillBuffer(void *data, size_t size) {
 
                 mIsFirstBuffer = false;
             } else {
-<<<<<<< HEAD
-                err = mSource->read(&mInputBuffer, &options);
-                if (err == OK && mInputBuffer == NULL && mSourcePaused) {
-                    ALOGV("mSourcePaused, return 0 from fillBuffer");
-                    return 0;
-=======
-#ifdef QCOM_HARDWARE
                 if(!mSourcePaused) {
-#endif
                     err = mSource->read(&mInputBuffer, &options);
-#ifdef QCOM_HARDWARE
                     if (err == OK && mInputBuffer == NULL && mSourcePaused) {
                         ALOGV("mSourcePaused, return 0 from fillBuffer");
                         return 0;
@@ -591,7 +581,6 @@ size_t AudioPlayer::fillBuffer(void *data, size_t size) {
                     break;
                 } else {
                     continue;
->>>>>>> 2a7ee7d... libstagefright: Fix ANR issue in HTTP Streaming
                 }
             }
 

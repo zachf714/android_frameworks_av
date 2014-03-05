@@ -4526,10 +4526,9 @@ bool ACodec::UninitializedState::onAllocateComponent(const sp<AMessage> &msg) {
     Vector<OMXCodec::CodecNameAndQuirks> matchingCodecs;
 
     AString mime;
-
+    int32_t encoder = false;
     AString componentName;
     uint32_t quirks = 0;
-    int32_t encoder = false;
     if (msg->findString("componentName", &componentName)) {
         ssize_t index = matchingCodecs.add();
         OMXCodec::CodecNameAndQuirks *entry = &matchingCodecs.editItemAt(index);
@@ -4568,6 +4567,46 @@ bool ACodec::UninitializedState::onAllocateComponent(const sp<AMessage> &msg) {
         status_t err = omx->allocateNode(componentName.c_str(), observer, &node);
         androidSetThreadPriority(tid, prevPriority);
 
+        if(err == OK && node != NULL) {
+            // set component name
+            mCodec->mComponentName = componentName;
+            mCodec->mFlags = 0;
+
+            if (componentName.endsWith(".secure")) {
+                mCodec->mFlags |= kFlagIsSecure;
+                mCodec->mFlags |= kFlagPushBlankBuffersToNativeWindowOnShutdown;
+            }
+
+            mCodec->mQuirks = quirks;
+            mCodec->mOMX = omx;
+            mCodec->mNode = node;
+        }
+
+        if ((err == OK) && !encoder && !strncasecmp(mime.c_str(), "video/", 6)) {
+            int32_t width=0, height=0;
+            if (msg->findInt32("width", &width)
+                    && msg->findInt32("height", &height)) {
+                //set and check if resolution is supported
+                OMX_VIDEO_CODINGTYPE compressionFormat;
+                err = GetVideoCodingTypeFromMime(mime.c_str(), &compressionFormat);
+
+#ifdef QCOM_HARDWARE
+                if (err != OK) {
+                    err = ExtendedCodec::setVideoOutputFormat(mime.c_str(),
+                                                              &compressionFormat);
+                }
+#endif
+                if (err == OK) {
+                    err = mCodec->setVideoFormatOnPort(kPortIndexInput, width,
+                                                       height, compressionFormat);
+                }
+
+                if(err != OK) {
+                    ALOGE("setVideoFormatOnPort Failed");
+                }
+            }
+        }
+
         if (err == OK) {
             break;
         } else {
@@ -4591,18 +4630,6 @@ bool ACodec::UninitializedState::onAllocateComponent(const sp<AMessage> &msg) {
 
     notify = new AMessage(kWhatOMXMessage, mCodec->id());
     observer->setNotificationMessage(notify);
-
-    mCodec->mComponentName = componentName;
-    mCodec->mFlags = 0;
-
-    if (componentName.endsWith(".secure")) {
-        mCodec->mFlags |= kFlagIsSecure;
-        mCodec->mFlags |= kFlagPushBlankBuffersToNativeWindowOnShutdown;
-    }
-
-    mCodec->mQuirks = quirks;
-    mCodec->mOMX = omx;
-    mCodec->mNode = node;
 
     {
         sp<AMessage> notify = mCodec->mNotify->dup();

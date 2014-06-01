@@ -68,6 +68,9 @@ void OMXMaster::addPlugin(const char *libname) {
 }
 
 void OMXMaster::addPlugin(OMXPluginBase *plugin) {
+    if (plugin == 0) {
+       return;
+    }
     Mutex::Autolock autoLock(mLock);
 
     mPlugins.push_back(plugin);
@@ -80,6 +83,7 @@ void OMXMaster::addPlugin(OMXPluginBase *plugin) {
                     name, sizeof(name), index++)) == OMX_ErrorNone) {
         String8 name8(name);
 
+        //ALOGV("plugin %d:%s ", plugin, name8.string());
         if (mPluginByComponentName.indexOfKey(name8) >= 0) {
             ALOGE("A component of name '%s' already exists, ignoring this one.",
                  name8.string());
@@ -106,13 +110,22 @@ void OMXMaster::clearPlugins() {
 
     mPluginByComponentName.clear();
 
+    int plugin = 1;
     for (List<OMXPluginBase *>::iterator it = mPlugins.begin();
             it != mPlugins.end(); ++it) {
         if (destroyOMXPlugin)
             destroyOMXPlugin(*it);
-        else
-            delete *it;
+        else {
+           ALOGV("plugin %d", *it);
+#ifdef TF101_OMX
+           if( *it != NULL && plugin != 1) // 1st plugin is NV, crashes on delete => skip, better than crash for the moment
+#endif
+	      delete *it;
+        }
+
+
         *it = NULL;
+	plugin++;
     }
 
     mPlugins.clear();

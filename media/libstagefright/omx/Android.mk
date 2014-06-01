@@ -33,6 +33,10 @@ LOCAL_SHARED_LIBRARIES :=               \
         libstagefright_foundation       \
         libdl
 
+ifeq ($(BOARD_USES_PROPRIETARY_OMX),TF101)
+LOCAL_CFLAGS     += -DTF101_OMX
+endif
+
 LOCAL_MODULE:= libstagefright_omx
 
 include $(BUILD_SHARED_LIBRARY)

@@ -1412,6 +1412,7 @@ void AudioTrack::releaseBuffer(Buffer* audioBuffer)
 
 // -------------------------------------------------------------------------
 
+ssize_t AudioTrack::write(const void* buffer, size_t userSize) { return this->write(buffer, userSize, true); }
 ssize_t AudioTrack::write(const void* buffer, size_t userSize, bool blocking)
 {
     if (mTransfer != TRANSFER_SYNC || mIsTimed) {
